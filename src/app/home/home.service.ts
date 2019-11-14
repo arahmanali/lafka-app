@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 
+import { Observable, Observer } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { SessionStorageService } from 'ngx-webstorage';
 
@@ -19,11 +20,19 @@ export class HomeService {
 
   signin() {
     let url = '/token';
-    return this.api.post({}, url).pipe(map((res) => res))
+    return this.api.post({}, url).pipe(map(res => res))
   }
 
-  signout(): void {
-    this._sessionStorage.clear();
+  validate(uuid: string) {
+    let url = '/validate';
+    return this.api.get(url, { key: 'token', value: uuid }).pipe(map(res => res))
+  }
+
+  signout() {
+    return Observable.create((observer: Observer<boolean>) => {
+      this._sessionStorage.clear('token');
+      observer.next(true);
+    });
   }
 
   isAuthenticated() {

@@ -13,7 +13,10 @@ export class InterceptorService {
 
   token: string;
 
-  constructor(private _sessionStorage: SessionStorageService, private toastr: ToastrService) { }
+  constructor(
+    private _sessionStorage: SessionStorageService,
+    private _toastr: ToastrService
+  ) { }
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
 
@@ -24,7 +27,7 @@ export class InterceptorService {
     };
 
     if (this.token !== null) {
-      options['headers'] = req.headers.set('x-token', this.token);
+      options['headers'] = req.headers.set('x-token', String(this.token));
     }
 
     let request = req.clone(options);
@@ -39,16 +42,13 @@ export class InterceptorService {
 
   handleResponse(req: HttpRequest<any>, event) {
     if (event instanceof HttpResponse) {
-      console.log('::Response::', event);
-    } else if (event instanceof HttpErrorResponse) {
-      console.log('::Error::', event);
-      this.toastr.error(event.message);
+      console.log('::Interceptor Response::', event);
     }
   }
 
   handleError(req: HttpRequest<any>, event) {
-    console.log('::Error::', event);
-    this.toastr.error(event.message);
+    console.log('::Interceptor Error::', event);
+    this._toastr.error(event.message);
   }
 
 }

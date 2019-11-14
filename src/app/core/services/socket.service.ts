@@ -20,16 +20,16 @@ export class SocketService {
     let transportOptions = {
       polling: {
         extraHeaders: {
-          "x-token": token
+          "x-token": token,
+          "content-type": "application/json"
         }
       }
     };
     this.socket = io(environment.baseUrl, { transportOptions })
-    this.connect();
   }
 
   // INIT
-  private connect() {
+  connectionInit() {
     this.socket.on('connect', () => {
       console.log('SOCKET CONNECTED');
     });
@@ -37,6 +37,10 @@ export class SocketService {
     this.socket.on('disconnect', () => {
       console.log('SOCKET DISCONNECTED');
     });
+  }
+  
+  disconnect() {
+    this.socket.close();
   }
 
   // EMITTER
@@ -46,9 +50,9 @@ export class SocketService {
 
   // LISTENER
   listen(event: string) {
-    return Observable.create((observer: Observer<JSON>) => {
-      this.socket.on(event, (message: any) => {
-        observer.next(message);
+    return Observable.create((observer: Observer<object>) => {
+      this.socket.on(event, (message: string, uuid?: string) => {
+        observer.next({ message, uuid });
       });
     });
   }

@@ -6,7 +6,7 @@ import { SessionStorageService } from 'ngx-webstorage';
 import { HomeService } from './home.service';
 import { SocketService } from '../core/services/socket.service';
 import { IResponse } from '../core/IResponse';
-import { IResponseError } from './ITypes';
+import { IResponseError, IValidateResponse } from './ITypes';
 
 @Component({
   selector: 'app-home',
@@ -17,6 +17,7 @@ import { IResponseError } from './ITypes';
 export class HomeComponent implements OnInit {
 
   isAuthenticated: boolean = false;
+  inProgress: boolean = false;
 
   constructor(
     private _homeService: HomeService,
@@ -28,7 +29,9 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit() {
-
+    if (this.isAuthenticated) {
+      this._socketService.connectionInit();
+    }
   }
 
   handleAuthenticate() {
@@ -36,32 +39,83 @@ export class HomeComponent implements OnInit {
       .subscribe((res: IResponse) => {
         if (res.status === 200 || res.status === 201) {
           this.sessionStorage.store('token', res.body.token);
+          this._socketService.connectionInit();
+          this.isAuthenticated = true;
+          this._toastr.success('You are now Logged in');
         }
       }, (error: IResponseError) => {
         this._toastr.error(error.message || 'Error Occurred');
       });
   }
 
-  handleRegister() {
-    this._socketService.emit('channel', '')
+  handleValidate(uuid: string) {
+    this._homeService.validate(uuid)
+      .subscribe((res: IValidateResponse) => {
+        console.log('handleValidate res: ', res);
+        if (res.status === 200 || res.status === 201) {
+          if (res.body) {
+            this._socketService.disconnect();
+            this.inProgress = false;
+            console.log('MESSAGE VALIDATED SUCCESSFULLY');
+            this._toastr.success('Process Completed');
+          }
+        }
+      },
+        this.handleError
+      );
   }
 
-  handleListener() {
+  handleLogout() {
+    this._homeService.signout()
+      .subscribe((res: IValidateResponse) => {
+        console.log('handleLogout res: ', res);
+        if (res) {
+          this.isAuthenticated = false;
+          console.log('LOGGED OUT SUCCESSFULLY');
+          this._toastr.success('You are now Logged out');
+        }
+      },
+        this.handleError
+      );
+  }
+
+  handleStartProcess() {
+    console.log('STARTED LISTENING CHANNEL');
+    this.inProgress = true;
     this._socketService.listen('channel')
-      .subscribe((channelId: string) => {
-        console.log('channelId: ', channelId);
-      }, (error: IResponseError) => {
-        this._toastr.error(error.message || 'Error Occurred');
-      });
+      .subscribe((res: { message: string }) => {
+        console.log('EMITTING ON JOIN ROOM WITH CHANNEL ID', res.message);
+        this._socketService.emit('join-room', res.message);
+      },
+        this.handleError
+      );
+
+    console.log('STARTED LISTENING ITEM');
+    this._socketService.listen('item')
+      .subscribe((res: { message: string, uuid: string }) => {
+        const uuid = res.uuid;
+        const counter = JSON.parse(res.message)[0];
+        console.log('counter: ', counter);
+        console.log('uuid: ', uuid);
+        if (counter === 10) {
+          console.log('STARTING VALIDATION WITH ', uuid);
+          this.handleValidate(uuid);
+        }
+      },
+        this.handleError
+      );
+
+    console.log('EMITTING ON CHANNEL');
+    this._socketService.emit('channel', '')
+
+    console.log('EMITTING ON COUNTER');
+    this._socketService.emit('counter', '')
   }
 
-  handleJoinRoom() {
-    this._socketService.listen('join-room')
-      .subscribe((channelId: string) => {
-        console.log('handleJoinRoom: ', channelId);
-      }, (error: IResponseError) => {
-        this._toastr.error(error.message || 'Error Occurred');
-      });
+  handleError(error: IResponseError) {
+    this._socketService.disconnect();
+    this.inProgress = false;
+    this._toastr.error(error.message || 'Error Occurred');
   }
 
 }

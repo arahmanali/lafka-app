@@ -5,6 +5,11 @@ export interface IResponse {
   }
 }
 
+export interface IValidateResponse {
+  status: number,
+  body: boolean
+}
+
 export interface IResponseError {
   message: string
 }
