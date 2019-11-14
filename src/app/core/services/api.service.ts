@@ -1,14 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
-import { IResponse } from '../IResponse';
-
 import { map } from 'rxjs/operators';
 
-interface IQuery {
-  key: string,
-  value: string
-}
+import { IQuery } from '../ITypes';
 
 @Injectable()
 export class ApiService {
@@ -24,21 +19,21 @@ export class ApiService {
 
   post(data: Object, url: string, query?: IQuery) {
     let { _url, params } = this.generateUrl(url, query);
-    return this._http.post<IResponse>(_url, data, { observe: 'response', params }).pipe(
+    return this._http.post(_url, data, { observe: 'response', params }).pipe(
       map(res => ({ status: res.status, body: res.body }))
     )
   }
 
   put(data: Object, url: string, query?: IQuery) {
     let { _url, params } = this.generateUrl(url, query);
-    return this._http.put<IResponse>(_url, data, { observe: 'response', params }).pipe(
+    return this._http.put(_url, data, { observe: 'response', params }).pipe(
       map(res => ({ status: res.status, body: res.body }))
     )
   }
 
   delete(url: string, query?: IQuery) {
     let { _url, params } = this.generateUrl(url, query);
-    return this._http.delete<IResponse>(_url, { observe: 'response', params }).pipe(
+    return this._http.delete(_url, { observe: 'response', params }).pipe(
       map(res => ({ status: res.status, body: res.body }))
     )
   }

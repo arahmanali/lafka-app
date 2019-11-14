@@ -12,6 +12,7 @@ import { environment } from 'src/environments/environment';
 export class SocketService {
 
   private socket: SocketIOClient.Socket;
+  private connected: boolean = false;
 
   constructor(
     private _sessionStorage: SessionStorageService
@@ -28,19 +29,29 @@ export class SocketService {
     this.socket = io(environment.baseUrl, { transportOptions })
   }
 
+  get isConnected() {
+    return this.connected;
+  }
+
   // INIT
   connectionInit() {
     this.socket.on('connect', () => {
       console.log('SOCKET CONNECTED');
+      this.connected = true;
     });
 
     this.socket.on('disconnect', () => {
       console.log('SOCKET DISCONNECTED');
+      this.connected = false;
     });
   }
-  
+
   disconnect() {
     this.socket.close();
+  }
+
+  connect() {
+    this.socket.connect();
   }
 
   // EMITTER
@@ -51,6 +62,7 @@ export class SocketService {
   // LISTENER
   listen(event: string) {
     return Observable.create((observer: Observer<object>) => {
+      this.socket.off(event);
       this.socket.on(event, (message: string, uuid?: string) => {
         observer.next({ message, uuid });
       });

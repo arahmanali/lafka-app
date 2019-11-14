@@ -5,7 +5,7 @@ import { SessionStorageService } from 'ngx-webstorage';
 
 import { HomeService } from './home.service';
 import { SocketService } from '../core/services/socket.service';
-import { IResponse, IResponseError, IValidateResponse } from './ITypes';
+import { IResponse, IResponseError, IValidateResponse, ISocketResponse } from './ITypes';
 import { LoggerService } from '../core/services/logger.service';
 
 @Component({
@@ -30,10 +30,11 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit() {
-    this._logger.log = 'Please Authenticate and start process';
     if (this.isAuthenticated) {
       this._socketService.connectionInit();
       this._logger.log = 'Authenticated'
+    } else {
+      this._logger.log = 'Please Authenticate and Start Process';
     }
   }
 
@@ -42,10 +43,12 @@ export class HomeComponent implements OnInit {
       .subscribe((res: IResponse) => {
         if (res.status === 200 || res.status === 201) {
           this.sessionStorage.store('token', res.body.token);
-          this._socketService.connectionInit();
           this.isAuthenticated = true;
-          this._logger.clearLogs();
+          if (!this._socketService.isConnected) {
+            this._socketService.connectionInit();
+          }
           this._logger.log = 'Authenticated'
+          this._logger.log = 'SOCKET CONNECTED';
           this._toastr.success('You are now Logged in');
         }
       }, (error: IResponseError) => {
@@ -53,20 +56,41 @@ export class HomeComponent implements OnInit {
       });
   }
 
-  handleValidate(uuid: string) {
-    this._homeService.validate(uuid)
-      .subscribe((res: IValidateResponse) => {
-        if (res.status === 200 || res.status === 201) {
-          if (res.body) {
-            this._socketService.disconnect();
-            this.inProgress = false;
-            this._logger.log = 'MESSAGE VALIDATED SUCCESSFULLY'
-            this._toastr.success('Process Completed');
-          }
+  handleStartProcess() {
+    if (!this._socketService.isConnected) {
+      this._socketService.connect();
+      this._logger.log = 'SOCKET CONNECTED';
+    }
+    this._logger.log = 'STARTED LISTENING CHANNEL';
+    this.inProgress = true;
+    this._socketService.listen('channel')
+      .subscribe((res: ISocketResponse) => {
+        this._socketService.emit('join-room', res.message);
+        this._logger.log = `EMITTING ON JOIN ROOM WITH CHANNEL ID, ${res.message}`
+      },
+        this._handleError
+      );
+
+    this._logger.log = 'STARTED LISTENING ITEM';
+    this._socketService.listen('item')
+      .subscribe((res: ISocketResponse) => {
+        const uuid = res.uuid;
+        const counter = JSON.parse(res.message)[0];
+        this._logger.log = `COUNTER: ${counter}`
+        this._logger.log = `MESSAGE: ${uuid}`
+        if (counter === 10) {
+          this._logger.log = `STARTING VALIDATION WITH ${uuid}`
+          this._handleValidate(uuid);
         }
       },
-        this.handleError
+        this._handleError
       );
+
+    this._logger.log = 'EMITTING ON CHANNEL'
+    this._socketService.emit('channel', '')
+
+    this._logger.log = 'EMITTING ON COUNTER'
+    this._socketService.emit('counter', '')
   }
 
   handleLogout() {
@@ -78,44 +102,28 @@ export class HomeComponent implements OnInit {
           this._toastr.success('You are now Logged out');
         }
       },
-        this.handleError
+        this._handleError
       );
   }
 
-  handleStartProcess() {
-    this._logger.log = 'STARTED LISTENING CHANNEL';
-    this.inProgress = true;
-    this._socketService.listen('channel')
-      .subscribe((res: { message: string }) => {
-        this._socketService.emit('join-room', res.message);
-        this._logger.log = `EMITTING ON JOIN ROOM WITH CHANNEL ID, ${res.message}`
-      },
-        this.handleError
-      );
-
-    this._logger.log = 'STARTED LISTENING ITEM';
-    this._socketService.listen('item')
-      .subscribe((res: { message: string, uuid: string }) => {
-        const uuid = res.uuid;
-        const counter = JSON.parse(res.message)[0];
-        this._logger.log = `COUNTER: ${counter}`
-        this._logger.log = `MESSAGE: ${uuid}`
-        if (counter === 10) {
-          this._logger.log = `STARTING VALIDATION WITH ${uuid}`
-          this.handleValidate(uuid);
+  private _handleValidate(uuid: string) {
+    this._homeService.validate(uuid)
+      .subscribe((res: IValidateResponse) => {
+        if (res.status === 200 || res.status === 201) {
+          if (res.body) {
+            this._socketService.disconnect();
+            this.inProgress = false;
+            this._logger.log = 'MESSAGE VALIDATED SUCCESSFULLY'
+            this._toastr.success('Process Completed');
+            this._logger.log = 'SOCKET DISCONNECTED';
+          }
         }
       },
-        this.handleError
+        this._handleError
       );
-
-    this._logger.log = 'EMITTING ON CHANNEL'
-    this._socketService.emit('channel', '')
-
-    this._logger.log = 'EMITTING ON COUNTER'
-    this._socketService.emit('counter', '')
   }
 
-  handleError(error: IResponseError) {
+  private _handleError(error: IResponseError) {
     this._socketService.disconnect();
     this.inProgress = false;
     this._toastr.error(error.message || 'Error Occurred');

@@ -5,6 +5,11 @@ export interface IResponse {
   }
 }
 
+export interface ISocketResponse {
+  message: string,
+  uuid?: string
+}
+
 export interface IValidateResponse {
   status: number,
   body: boolean
