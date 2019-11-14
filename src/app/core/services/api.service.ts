@@ -22,14 +22,14 @@ export class ApiService {
     )
   }
 
-  post(data: JSON, url: string, query?: IQuery) {
+  post(data: Object, url: string, query?: IQuery) {
     let { _url, params } = this.generateUrl(url, query);
     return this._http.post<IResponse>(_url, data, { observe: 'response', params }).pipe(
       map(res => ({ status: res.status, body: res.body }))
     )
   }
 
-  put(data: JSON, url: string, query?: IQuery) {
+  put(data: Object, url: string, query?: IQuery) {
     let { _url, params } = this.generateUrl(url, query);
     return this._http.put<IResponse>(_url, data, { observe: 'response', params }).pipe(
       map(res => ({ status: res.status, body: res.body }))

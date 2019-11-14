@@ -1,25 +1,24 @@
-<p>home works!</p>
-<button
-  class="btn btn-default"
-  type="submit"
-  (click)="handleAuthenticate()"
-  [disabled]="isAuthenticated"
->
-  Authenticate
-</button>
-<button
-  class="btn btn-default"
-  type="submit"
-  (click)="handleStartProcess()"
-  [disabled]="inProgress || !isAuthenticated"
->
-  Start Process
-</button>
-<button
-  class="btn btn-default"
-  type="submit"
-  (click)="handleLogout()"
-  [disabled]="inProgress || !isAuthenticated"
->
-  Logout
-</button>
+<div class="content">
+  <div class="actions btn-group btn-group-justified" role="group">
+    <div class="btn-group" role="group">
+      <button class="btn btn-default" type="submit" (click)="handleAuthenticate()" [disabled]="isAuthenticated">
+        Authenticate
+      </button>
+    </div>
+    <div class="btn-group" role="group">
+      <button class="btn btn-default" type="submit" (click)="handleStartProcess()"
+        [disabled]="inProgress || !isAuthenticated">
+        Start Process
+      </button>
+    </div>
+    <div class="btn-group" role="group">
+
+      <button class="btn btn-default" type="submit" (click)="handleLogout()"
+        [disabled]="inProgress || !isAuthenticated">
+        Logout
+      </button>
+    </div>
+  </div>
+  <!-- logger -->
+  <app-logger></app-logger>
+</div>

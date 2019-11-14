@@ -5,8 +5,8 @@ import { SessionStorageService } from 'ngx-webstorage';
 
 import { HomeService } from './home.service';
 import { SocketService } from '../core/services/socket.service';
-import { IResponse } from '../core/IResponse';
-import { IResponseError, IValidateResponse } from './ITypes';
+import { IResponse, IResponseError, IValidateResponse } from './ITypes';
+import { LoggerService } from '../core/services/logger.service';
 
 @Component({
   selector: 'app-home',
@@ -23,14 +23,17 @@ export class HomeComponent implements OnInit {
     private _homeService: HomeService,
     private _socketService: SocketService,
     private _toastr: ToastrService,
-    private sessionStorage: SessionStorageService
+    private sessionStorage: SessionStorageService,
+    private _logger: LoggerService
   ) {
     this.isAuthenticated = this._homeService.isAuthenticated()
   }
 
   ngOnInit() {
+    this._logger.log = 'Please Authenticate and start process';
     if (this.isAuthenticated) {
       this._socketService.connectionInit();
+      this._logger.log = 'Authenticated'
     }
   }
 
@@ -41,6 +44,8 @@ export class HomeComponent implements OnInit {
           this.sessionStorage.store('token', res.body.token);
           this._socketService.connectionInit();
           this.isAuthenticated = true;
+          this._logger.clearLogs();
+          this._logger.log = 'Authenticated'
           this._toastr.success('You are now Logged in');
         }
       }, (error: IResponseError) => {
@@ -51,12 +56,11 @@ export class HomeComponent implements OnInit {
   handleValidate(uuid: string) {
     this._homeService.validate(uuid)
       .subscribe((res: IValidateResponse) => {
-        console.log('handleValidate res: ', res);
         if (res.status === 200 || res.status === 201) {
           if (res.body) {
             this._socketService.disconnect();
             this.inProgress = false;
-            console.log('MESSAGE VALIDATED SUCCESSFULLY');
+            this._logger.log = 'MESSAGE VALIDATED SUCCESSFULLY'
             this._toastr.success('Process Completed');
           }
         }
@@ -67,11 +71,10 @@ export class HomeComponent implements OnInit {
 
   handleLogout() {
     this._homeService.signout()
-      .subscribe((res: IValidateResponse) => {
-        console.log('handleLogout res: ', res);
+      .subscribe((res: boolean) => {
         if (res) {
           this.isAuthenticated = false;
-          console.log('LOGGED OUT SUCCESSFULLY');
+          this._logger.log = 'LOGGED OUT SUCCESSFULLY'
           this._toastr.success('You are now Logged out');
         }
       },
@@ -80,35 +83,35 @@ export class HomeComponent implements OnInit {
   }
 
   handleStartProcess() {
-    console.log('STARTED LISTENING CHANNEL');
+    this._logger.log = 'STARTED LISTENING CHANNEL';
     this.inProgress = true;
     this._socketService.listen('channel')
       .subscribe((res: { message: string }) => {
-        console.log('EMITTING ON JOIN ROOM WITH CHANNEL ID', res.message);
         this._socketService.emit('join-room', res.message);
+        this._logger.log = `EMITTING ON JOIN ROOM WITH CHANNEL ID, ${res.message}`
       },
         this.handleError
       );
 
-    console.log('STARTED LISTENING ITEM');
+    this._logger.log = 'STARTED LISTENING ITEM';
     this._socketService.listen('item')
       .subscribe((res: { message: string, uuid: string }) => {
         const uuid = res.uuid;
         const counter = JSON.parse(res.message)[0];
-        console.log('counter: ', counter);
-        console.log('uuid: ', uuid);
+        this._logger.log = `COUNTER: ${counter}`
+        this._logger.log = `MESSAGE: ${uuid}`
         if (counter === 10) {
-          console.log('STARTING VALIDATION WITH ', uuid);
+          this._logger.log = `STARTING VALIDATION WITH ${uuid}`
           this.handleValidate(uuid);
         }
       },
         this.handleError
       );
 
-    console.log('EMITTING ON CHANNEL');
+    this._logger.log = 'EMITTING ON CHANNEL'
     this._socketService.emit('channel', '')
 
-    console.log('EMITTING ON COUNTER');
+    this._logger.log = 'EMITTING ON COUNTER'
     this._socketService.emit('counter', '')
   }
 

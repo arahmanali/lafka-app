@@ -1,7 +1,7 @@
 export interface IResponse {
   status: number,
   body: {
-    token: string
+    token?: string
   }
 }
 

@@ -1,5 +1,5 @@
 export interface IResponse {
-  status: number,
+  url: string,
   body: any,
-  token: string
+  options?: Object
 }
